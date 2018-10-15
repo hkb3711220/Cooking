@@ -17,36 +17,31 @@ def make_dictionary(dataset, output_name=None):
     work_list = set(work_list)
 
     work_dict = {}
+
     for i, name in enumerate(work_list):
-        work_dict[name] = i + 1
+        work_dict[name] = i
 
     with open('%s.dump'%(output_name), 'wb') as f:
         pickle.dump(work_dict, f)
 
-def load_dict(cuisine=None, ingredients=None):
-
-    global cuisine_dict
-    global ingredient_dict
+def load_dict(cuisine = None, ingredient = None):
 
     cuisine_dict_path = './cuisines.dump'
     ingredient_dict_path = './ingredients.dump'
 
-    cuisines_exist = os.path.exists(cuisine_dict_path)
-    ingredients_exist = os.path.exists(ingredient_dict_path)
+    cuisine_exist = os.path.exists(cuisine_dict_path)
+    ingredient_exist = os.path.exists(ingredient_dict_path)
 
-    if cuisines_exist==True and ingredients_exist==True:
-        cuisine_dict = pickle.load(open('cuisines.dump', 'rb'))
-        ingredient_dict = pickle.load(open('ingredients.dump', 'rb'))
-    else:
-        if cuisines_exist == False:
-            make_dictionary(cuisine, output_name='cuisines')
-        elif ingredients_exist == False:
-            make_dictionary(ingredients, output_name='ingredients')
-        else:
-            make_dictionary(cuisine, output_name='cuisines')
-            make_dictionary(ingredients, output_name='ingredients')
+    if cuisine_exist == False:
+        make_dictionary(cuisine, output_name='cuisines')
+    if ingredient_exist == False:
+        make_dictionary(ingredient, output_name='ingredients')
+
+    cuisine_dict = pickle.load(open('cuisines.dump', 'rb'))
+    ingredient_dict = pickle.load(open('ingredients.dump', 'rb'))
 
     return cuisine_dict, ingredient_dict
+
 
 def load_train_data(file_name=None):
     open_file = open(file_name, 'r')
@@ -58,12 +53,12 @@ def load_train_data(file_name=None):
         cuisines.append(recipe['cuisine'])
         ingredients.append(recipe['ingredients'])
 
-    cuisine_dict, ingredient_dict = load_dict()
+    cuisine_dict, ingredient_dict = load_dict(cuisine=cuisines, ingredient=ingredients)
 
-    cuisine = [cuisine_dict[cuis] for cuis in cuisines]
+    cuisines = [cuisine_dict[cuis] for cuis in cuisines]
     ingredients = [[ingredient_dict[ingred] for ingred in ingred_list] for ingred_list in ingredients]
 
-    return ingredients, cuisine
+    return ingredients, cuisines
 
 def load_test_data(file_name=None):
     open_file = open(file_name, 'r')
@@ -73,18 +68,18 @@ def load_test_data(file_name=None):
     for recipe in infs:
         ingredients.append(recipe['ingredients'])
 
-    cuisine_dict, ingredient_dict = load_dict()
+    cuisine_dict, ingredient_dict = load_dict(cuisine = None, ingredient = None)
 
     for ingred_list in ingredients:
         for ingred in ingred_list:
             if ingred not in ingredient_dict:
-                ingredient_dict[ingred] = 0
+                ingredient_dict[ingred] = len(ingredient_dict) + 1
 
     ingredients = [[ingredient_dict[ingred] for ingred in ingred_list] for ingred_list in ingredients]
 
     return ingredients
 
-#The parameters for train
+#The parameters for train and test
 train_data, train_label = load_train_data(file_name='train.json')
 train_data_leg = [len(data) for data in train_data]
 max_data_leg = max(train_data_leg)

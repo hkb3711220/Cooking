@@ -1,7 +1,11 @@
+import os
 import tensorflow as tf
 from RNN_model_preprocess import test_data, train_data, train_label, train_data_leg, max_data_leg, ingredient_dict,cuisine_dict
 from tensorflow.nn.rnn_cell import GRUCell, DropoutWrapper, MultiRNNCell
 import numpy as np
+import sys
+
+os.chdir(os.path.dirname(__file__))
 
 def embedding_variable(vol_size, embed_size):
     init_embed = tf.random_uniform([vol_size, embed_size])
@@ -19,7 +23,7 @@ def next_batch(num, data, labels, sequence_length):
     return np.asarray(data_shuffle), np.asarray(labels_shuffle), np.asarray(seq_leg_shuffle)
 
 num_layers = 3
-batch_size = 10
+batch_size = 10000
 num_class = len(cuisine_dict)
 embed_ingred_size = len(ingredient_dict)
 embed_size = 100
@@ -34,7 +38,7 @@ y = tf.placeholder(dtype=tf.int64, shape=[None])
 sequence_length = tf.placeholder(dtype=tf.int32, shape=[None])
 keep_prob = tf.placeholder(dtype=tf.float32)
 num_units = 100
-n_epoch = 10
+n_epoch = 10000
 
 with tf.variable_scope('embedding'):
     rnn_input = tf.contrib.layers.embed_sequence(x,
@@ -43,10 +47,10 @@ with tf.variable_scope('embedding'):
 
 with tf.variable_scope('rnn'):
     cell = GRUCell(num_units)
-    drop_cell = DropoutWrapper(cell, output_keep_prob=keep_prob)
-    stack_cell = MultiRNNCell([drop_cell for _ in range(num_layers)])
+    cell = DropoutWrapper(cell, output_keep_prob=keep_prob)
+    cell = MultiRNNCell([cell for _ in range(num_layers)])
 
-    outputs, states = tf.nn.dynamic_rnn(stack_cell,
+    outputs, states = tf.nn.dynamic_rnn(cell,
                                        rnn_input,
                                        dtype=tf.float32,
                                        sequence_length=sequence_length)
@@ -58,14 +62,16 @@ with tf.variable_scope('rnn'):
 with tf.variable_scope('full_connected'):
     state = states[-1]
     fc = tf.contrib.layers.fully_connected(state, num_class, activation_fn=None)
+    #fc [baize_size, num_class]
 
-with tf.name_scope('train'):
-    xentropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=fc)
+
+with tf.variable_scope('train'):
+    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=fc)
     loss = tf.reduce_mean(xentropy)
     optimizer = tf.train.AdamOptimizer(0.001)
     training_op = optimizer.minimize(loss)
 
-with tf.name_scope('accuarcy'):
+with tf.variable_scope('accuarcy'):
     predicted = tf.nn.softmax(fc)
     correct_pred = tf.equal(tf.argmax(predicted, 1), y)
     accuarcy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
@@ -77,13 +83,12 @@ init.run()
 
 for epoch in range(n_epoch):
     X_batch, y_batch, seq_leg_batch = next_batch(batch_size, train_data, train_label, train_data_leg)
-    print(y_batch)
-    #output = sess.run([xentropy], feed_dict={x:X_batch,
-                                     #y:y_batch,
-                                     #sequence_length:seq_leg_batch,
-                                     #keep_prob:0.5})
-    #accuarcy_train = sess.run(accuarcy, feed_dict={X:X_batch,
-                                                   #y:y_batch,
-                                                   #sequence_length:seq_leg_batch,
-                                                   #keep_prob:1.0})
-    #print(output)
+    sess.run([training_op], feed_dict={x:X_batch,
+                                       y:y_batch,
+                                       sequence_length:seq_leg_batch,
+                                       keep_prob:0.5})
+    accuarcy_train = sess.run(accuarcy, feed_dict={x:X_batch,
+                                                   y:y_batch,
+                                                   sequence_length:seq_leg_batch,
+                                                   keep_prob:1.0})
+    print(accuarcy_train)
