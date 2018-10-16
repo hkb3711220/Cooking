@@ -23,7 +23,7 @@ def next_batch(num, data, labels, sequence_length):
     return np.asarray(data_shuffle), np.asarray(labels_shuffle), np.asarray(seq_leg_shuffle)
 
 num_layers = 3
-batch_size = 10000
+batch_size = 1000
 num_class = len(cuisine_dict)
 embed_ingred_size = len(ingredient_dict)
 embed_size = 100
@@ -38,7 +38,7 @@ y = tf.placeholder(dtype=tf.int64, shape=[None])
 sequence_length = tf.placeholder(dtype=tf.int32, shape=[None])
 keep_prob = tf.placeholder(dtype=tf.float32)
 num_units = 100
-n_epoch = 10000
+n_epoch = 100
 
 with tf.variable_scope('embedding'):
     rnn_input = tf.contrib.layers.embed_sequence(x,
@@ -64,12 +64,13 @@ with tf.variable_scope('full_connected'):
     fc = tf.contrib.layers.fully_connected(state, num_class, activation_fn=None)
     #fc [baize_size, num_class]
 
-
 with tf.variable_scope('train'):
     xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=fc)
     loss = tf.reduce_mean(xentropy)
     optimizer = tf.train.AdamOptimizer(0.001)
-    training_op = optimizer.minimize(loss)
+    grad_and_vars = optimizer.compute_gradients(loss)
+    clipped_grad_and_vars = [(tf.clip_by_value(grad,-1,1),var) for grad, var in grad_and_vars]
+    training_op = optimizer.apply_gradients(clipped_grad_and_vars)
 
 with tf.variable_scope('accuarcy'):
     predicted = tf.nn.softmax(fc)
@@ -87,8 +88,10 @@ for epoch in range(n_epoch):
                                        y:y_batch,
                                        sequence_length:seq_leg_batch,
                                        keep_prob:0.5})
-    accuarcy_train = sess.run(accuarcy, feed_dict={x:X_batch,
-                                                   y:y_batch,
-                                                   sequence_length:seq_leg_batch,
-                                                   keep_prob:1.0})
-    print(accuarcy_train)
+    if epoch % 10 == 0:
+        accuarcy_train = sess.run(accuarcy, feed_dict={x:X_batch,
+                                                       y:y_batch,
+                                                       sequence_length:seq_leg_batch,
+                                                       keep_prob:1.0})
+
+        print("step", epoch, "accuarcy:",accuarcy_train)
