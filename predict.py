@@ -1,5 +1,6 @@
 import tensorflow as tf
-from RNN_model_preprocess import test_data, test_data_leg
+from RNN_model_preprocess import test_data, test_data_leg, cuisine_dict, test_data_ids
+import pandas as pd
 
 model = tf.train.import_meta_graph('./my_model.ckpt.meta')
 
@@ -15,7 +16,20 @@ with tf.Session() as sess:
         #print(op.name)
 
     model.restore(sess, './my_model.ckpt')
-    prediction = sess.run([result], feed_dict={x:test_data,
+    predictions = sess.run([result], feed_dict={x:test_data,
                                                sequence_length:test_data_leg,
                                                keep_prob:1.0})
-    print(prediction)
+
+def get_keys_from_value(d, val):
+    result = [k for k, v in d.items() if v == val]
+    return result[0]
+
+submission = []
+for elements in predictions:
+    for element in elements:
+        submission.append(get_keys_from_value(cuisine_dict, element))
+
+submission = pd.DataFrame({'id': test_data_ids,
+                           'cuisine': submission})
+
+submission.to_csv('output.csv', index=False)

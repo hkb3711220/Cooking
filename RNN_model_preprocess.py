@@ -65,9 +65,11 @@ def load_test_data(file_name=None):
     open_file = open(file_name, 'r')
     infs = json.load(open_file)
 
+    ids = []
     ingredients = []
     for recipe in infs:
         ingredients.append(recipe['ingredients'])
+        ids.append(recipe['id'])
 
     cuisine_dict, ingredient_dict = load_dict(cuisine = None, ingredient = None)
 
@@ -80,7 +82,7 @@ def load_test_data(file_name=None):
 
     ingredients = [[ingredient_dict[ingred] for ingred in ingred_list] for ingred_list in ingredients]
 
-    return ingredients
+    return ingredients, ids
 
 #The parameters for train and test
 
@@ -89,7 +91,7 @@ train_data_leg = [len(data) for data in train_data]
 max_data_leg = max(train_data_leg)
 cuisine_dict, ingredient_dict = load_dict()
 train_data = [data + [ingredient_dict['<UNK>']]*(max_data_leg - len(data)) for data in train_data]
-test_data = load_test_data(file_name='test.json')
+test_data, test_data_ids = load_test_data(file_name='test.json')
 test_data_leg = [len(data) for data in test_data]
 test_data = [data + [ingredient_dict['<UNK>']]*(max_data_leg - len(data)) for data in test_data]
 
