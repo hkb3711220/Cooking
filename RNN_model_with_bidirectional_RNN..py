@@ -7,6 +7,7 @@ import numpy as np
 import sys
 
 os.chdir(os.path.dirname(__file__))
+cwd = os.getcwd()
 
 def embedding_variable(vol_size, embed_size):
     init_embed = tf.random_uniform([vol_size, embed_size])
@@ -73,8 +74,6 @@ with tf.variable_scope('rnn'):
     bw_states = bw_states[-1] #[batch_size,num_of_units]
     fc_states = tf.concat([fw_states, bw_states], 1)
 
-
-exit()
 with tf.variable_scope('full_connected'):
     fc = tf.contrib.layers.fully_connected(fc_states, num_class, activation_fn=None)
     #fc [baize_size, num_class]
@@ -86,16 +85,21 @@ with tf.variable_scope('train'):
     grad_and_vars = optimizer.compute_gradients(loss)
     clipped_grad_and_vars = [(tf.clip_by_value(grad,-1,1),var) for grad, var in grad_and_vars]
     training_op = optimizer.apply_gradients(clipped_grad_and_vars)
+    tf.summary.scalar("loss", loss)
 
 with tf.variable_scope('accuarcy'):
     predicted = tf.nn.softmax(fc)
     correct_pred = tf.equal(tf.argmax(predicted, 1), y)
     accuarcy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    tf.summary.scalar("accuarcy", accuarcy)
 
+
+saver = tf.train.Saver()
 init = tf.global_variables_initializer()
 sess = tf.InteractiveSession()
 init.run()
 
+min_loss = None
 for epoch in range(n_epoch):
     X_batch, y_batch, seq_leg_batch = next_batch(batch_size, train_data, train_label, train_data_leg)
     sess.run([training_op], feed_dict={x:X_batch,
@@ -103,9 +107,18 @@ for epoch in range(n_epoch):
                                        sequence_length:seq_leg_batch,
                                        keep_prob:0.5})
     if epoch % 10 == 0:
+        X_batch, y_batch, seq_leg_batch = next_batch(batch_size, train_data, train_label, train_data_leg)
         loss_train, accuarcy_train = sess.run([loss, accuarcy], feed_dict={x:X_batch,
-                                                       y:y_batch,
-                                                       sequence_length:seq_leg_batch,
-                                                       keep_prob:1.0})
+                                                                           y:y_batch,
+                                                                           sequence_length:seq_leg_batch,
+                                                                           keep_prob:1.0})
+
+        if min_loss is None:
+            min_loss = loss_train
+        elif loss_train < min_loss:
+            min_loss = loss_train
+            saver.save(sess, cwd + "//my_model.ckpt")
 
         print("step", epoch, "loss:", loss_train, "accuarcy:",accuarcy_train)
+
+FileWriter = tf.summary.FileWriter("./log", graph=sess.graph)
