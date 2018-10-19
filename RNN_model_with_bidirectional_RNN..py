@@ -40,7 +40,7 @@ y = tf.placeholder(dtype=tf.int64, shape=[None])
 sequence_length = tf.placeholder(dtype=tf.int32, shape=[None])
 keep_prob = tf.placeholder(dtype=tf.float32)
 num_units = 100
-n_epoch = 1000
+n_epoch = 3000
 
 with tf.variable_scope('embedding'):
     rnn_input = tf.contrib.layers.embed_sequence(x,
@@ -93,11 +93,11 @@ with tf.variable_scope('accuarcy'):
     accuarcy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
     tf.summary.scalar("accuarcy", accuarcy)
 
-
 saver = tf.train.Saver()
 init = tf.global_variables_initializer()
 sess = tf.InteractiveSession()
 init.run()
+FileWriter = tf.summary.FileWriter("./log", graph=tf.get_default_graph())
 
 min_loss = None
 for epoch in range(n_epoch):
@@ -106,7 +106,7 @@ for epoch in range(n_epoch):
                                        y:y_batch,
                                        sequence_length:seq_leg_batch,
                                        keep_prob:0.5})
-    if epoch % 10 == 0:
+    if epoch % 100 == 0:
         X_batch, y_batch, seq_leg_batch = next_batch(batch_size, train_data, train_label, train_data_leg)
         loss_train, accuarcy_train = sess.run([loss, accuarcy], feed_dict={x:X_batch,
                                                                            y:y_batch,
@@ -120,5 +120,3 @@ for epoch in range(n_epoch):
             saver.save(sess, cwd + "//my_model.ckpt")
 
         print("step", epoch, "loss:", loss_train, "accuarcy:",accuarcy_train)
-
-FileWriter = tf.summary.FileWriter("./log", graph=sess.graph)

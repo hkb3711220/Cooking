@@ -20,7 +20,7 @@ def make_dictionary(dataset, output_name=None):
     for i, name in enumerate(work_list):
         work_dict[name] = i
     if output_name == "ingredients":
-        work_dict['<EOS>'] = len(work_dict)
+        work_dict['<UNK>'] = len(work_dict)
 
     with open('%s.dump'%(output_name), 'wb') as f:
         pickle.dump(work_dict, f)
@@ -74,7 +74,9 @@ def load_test_data(file_name=None):
     for ingred_list in ingredients:
         for ingred in ingred_list:
             if ingred not in ingredient_dict:
-                ingredient_dict[ingred] = 0
+                ingredient_dict[ingred] = ingredient_dict['<UNK>']
+
+    #print(ingredient_dict)
 
     ingredients = [[ingredient_dict[ingred] for ingred in ingred_list] for ingred_list in ingredients]
 
@@ -86,6 +88,9 @@ train_data, train_label = load_train_data(file_name='train.json')
 train_data_leg = [len(data) for data in train_data]
 max_data_leg = max(train_data_leg)
 cuisine_dict, ingredient_dict = load_dict()
-train_data = [data + [ingredient_dict['<EOS>']]*(max_data_leg - len(data)) for data in train_data]
+train_data = [data + [ingredient_dict['<UNK>']]*(max_data_leg - len(data)) for data in train_data]
 test_data = load_test_data(file_name='test.json')
-test_data = [data + [ingredient_dict['<EOS>']]*(max_data_leg - len(data)) for data in test_data]
+test_data_leg = [len(data) for data in test_data]
+test_data = [data + [ingredient_dict['<UNK>']]*(max_data_leg - len(data)) for data in test_data]
+
+#print(ingredient_dict)
